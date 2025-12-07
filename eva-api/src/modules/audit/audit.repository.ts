@@ -7,6 +7,8 @@ import { AuditLog, AuditLogFilter } from './audit.types';
 export class AuditRepository extends BaseRepository<AuditLog> {
   protected tableName = 'audit_logs';
 
+  protected useTimestamps = false;
+  
   /**
    * Optimized Search with Database Pagination
    */

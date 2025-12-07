@@ -3,6 +3,7 @@ import { RefreshToken } from "../users/user.type";
 
 export class RefreshTokenRepository extends BaseRepository<RefreshToken> {
   protected tableName = 'refresh_tokens';
+  protected useTimestamps: boolean = false; 
 
   async findByTokenHash(tokenHash: string): Promise<RefreshToken | null> {
     return this.newQuery()

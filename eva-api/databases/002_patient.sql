@@ -1,222 +1,164 @@
--- Patient Management Schema
+-- ===================================
+-- DENTAL CLINIC MIS - Seed Data Script
+-- Executes after schema creation
+-- ===================================
 
--- Patients Table
-CREATE TABLE patients (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    patient_number VARCHAR(50) UNIQUE NOT NULL,
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL,
-    middle_name VARCHAR(100),
-    date_of_birth DATE NOT NULL,
-    gender ENUM('male', 'female', 'other') NOT NULL,
-    blood_type ENUM('A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'unknown') DEFAULT 'unknown',
-    
-    -- Contact Information
-    email VARCHAR(255),
-    phone VARCHAR(20) NOT NULL,
-    alternate_phone VARCHAR(20),
-    
-    -- Address
-    address_line1 VARCHAR(255),
-    address_line2 VARCHAR(255),
-    city VARCHAR(100),
-    state VARCHAR(100),
-    postal_code VARCHAR(20),
-    country VARCHAR(100) DEFAULT 'Philippines',
-    
-    -- Emergency Contact
-    emergency_contact_name VARCHAR(200),
-    emergency_contact_phone VARCHAR(20),
-    emergency_contact_relationship VARCHAR(100),
-    
-    -- Medical Information
-    allergies TEXT,
-    medical_conditions TEXT,
-    current_medications TEXT,
-    
-    -- Insurance (optional)
-    insurance_provider VARCHAR(200),
-    insurance_policy_number VARCHAR(100),
-    
-    -- Status
-    status ENUM('active', 'inactive', 'archived') NOT NULL DEFAULT 'active',
-    
-    -- Notes
-    notes TEXT,
-    
-    -- Metadata
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP NULL,
-    created_by BIGINT UNSIGNED,
-    updated_by BIGINT UNSIGNED,
-    deleted_by BIGINT UNSIGNED,
-    
-    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (deleted_by) REFERENCES users(id) ON DELETE SET NULL,
-    
-    INDEX idx_patient_number (patient_number),
-    INDEX idx_phone (phone),
-    INDEX idx_email (email),
-    INDEX idx_status (status),
-    INDEX idx_deleted_at (deleted_at),
-    INDEX idx_date_of_birth (date_of_birth),
-    INDEX idx_name (last_name, first_name),
-    FULLTEXT idx_search (first_name, last_name, email, phone, patient_number)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+USE dental_clinic_mis;
 
--- Medical History Table
-CREATE TABLE medical_history (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    patient_id BIGINT UNSIGNED NOT NULL,
-    category ENUM('allergy', 'condition', 'medication', 'surgery', 'family_history', 'other') NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    diagnosed_date DATE,
-    status ENUM('active', 'resolved', 'managed') DEFAULT 'active',
-    severity ENUM('low', 'medium', 'high', 'critical'),
-    notes TEXT,
-    
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    created_by BIGINT UNSIGNED,
-    
-    FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
-    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
-    
-    INDEX idx_patient_id (patient_id),
-    INDEX idx_category (category),
-    INDEX idx_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- Disable foreign key checks temporarily for bulk operations
+SET FOREIGN_KEY_CHECKS = 0;
 
--- Dental Records Table
-CREATE TABLE dental_records (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    patient_id BIGINT UNSIGNED NOT NULL,
-    visit_date DATE NOT NULL,
-    tooth_number VARCHAR(10),
-    diagnosis TEXT NOT NULL,
-    treatment_provided TEXT,
-    treatment_plan TEXT,
-    prescription TEXT,
-    
-    -- Vital Signs
-    blood_pressure VARCHAR(20),
-    pulse VARCHAR(20),
-    temperature VARCHAR(20),
-    
-    -- Cost
-    cost DECIMAL(10, 2),
-    paid DECIMAL(10, 2),
-    balance DECIMAL(10, 2),
-    
-    -- Staff
-    dentist_id BIGINT UNSIGNED,
-    hygienist_id BIGINT UNSIGNED,
-    
-    notes TEXT,
-    next_visit_date DATE,
-    
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    created_by BIGINT UNSIGNED,
-    
-    FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
-    FOREIGN KEY (dentist_id) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (hygienist_id) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
-    
-    INDEX idx_patient_id (patient_id),
-    INDEX idx_visit_date (visit_date),
-    INDEX idx_dentist_id (dentist_id),
-    INDEX idx_next_visit (next_visit_date)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- -----------------------------------
+-- 1. SETUP VARIABLES
+-- -----------------------------------
 
--- Patient Documents Table
-CREATE TABLE patient_documents (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    patient_id BIGINT UNSIGNED NOT NULL,
-    document_type ENUM('xray', 'photo', 'consent_form', 'insurance', 'prescription', 'lab_result', 'other') NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    file_name VARCHAR(255) NOT NULL,
-    file_path VARCHAR(500) NOT NULL,
-    file_size BIGINT UNSIGNED,
-    mime_type VARCHAR(100),
-    
-    uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    uploaded_by BIGINT UNSIGNED,
-    
-    FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
-    FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL,
-    
-    INDEX idx_patient_id (patient_id),
-    INDEX idx_document_type (document_type),
-    INDEX idx_uploaded_at (uploaded_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- The hash below is for the password: "password"
+-- Generated using standard Bcrypt (cost 10)
+SET @default_pass = '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi';
+SET @now = NOW();
 
--- Patient Notes Table
-CREATE TABLE patient_notes (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    patient_id BIGINT UNSIGNED NOT NULL,
-    note_type ENUM('general', 'treatment', 'billing', 'insurance', 'follow_up', 'alert') NOT NULL DEFAULT 'general',
-    title VARCHAR(255),
-    content TEXT NOT NULL,
-    is_alert BOOLEAN DEFAULT FALSE,
-    
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    created_by BIGINT UNSIGNED,
-    
-    FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
-    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
-    
-    INDEX idx_patient_id (patient_id),
-    INDEX idx_note_type (note_type),
-    INDEX idx_is_alert (is_alert),
-    INDEX idx_created_at (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- Retrieve Role IDs (Assumes Section 6 of schema was run)
+SET @role_admin = (SELECT id FROM roles WHERE name = 'admin' LIMIT 1);
+SET @role_dentist = (SELECT id FROM roles WHERE name = 'dentist' LIMIT 1);
+SET @role_receptionist = (SELECT id FROM roles WHERE name = 'receptionist' LIMIT 1);
+SET @role_patient = (SELECT id FROM roles WHERE name = 'patient' LIMIT 1);
 
--- Treatment Templates Table (for common treatments)
-CREATE TABLE treatment_templates (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    default_cost DECIMAL(10, 2),
-    estimated_duration INT, -- in minutes
-    category VARCHAR(100),
-    requires_multiple_visits BOOLEAN DEFAULT FALSE,
-    
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    created_by BIGINT UNSIGNED,
-    
-    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
-    
-    INDEX idx_name (name),
-    INDEX idx_category (category)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- -----------------------------------
+-- 2. SEED USERS
+-- -----------------------------------
 
--- Insert common treatment templates
-INSERT INTO treatment_templates (name, description, default_cost, estimated_duration, category) VALUES
-('Dental Cleaning', 'Regular teeth cleaning and polishing', 1500.00, 30, 'Preventive'),
-('Tooth Extraction', 'Simple tooth extraction', 2500.00, 30, 'Surgery'),
-('Dental Filling', 'Composite filling for cavity', 2000.00, 45, 'Restorative'),
-('Root Canal', 'Root canal treatment', 8000.00, 90, 'Endodontics'),
-('Crown', 'Dental crown placement', 15000.00, 60, 'Restorative'),
-('Teeth Whitening', 'Professional teeth whitening', 5000.00, 60, 'Cosmetic'),
-('Dental Bridge', 'Fixed dental bridge', 25000.00, 90, 'Restorative'),
-('Dental Implant', 'Single dental implant', 50000.00, 120, 'Surgery'),
-('Orthodontic Consultation', 'Braces/Invisalign consultation', 500.00, 30, 'Orthodontics'),
-('Emergency Visit', 'Emergency dental visit', 3000.00, 45, 'Emergency');
+-- 2.1 Create the Main Administrator
+INSERT INTO users (
+    email, password_hash, first_name, last_name, phone, 
+    role_id, status, email_verified, email_verified_at, 
+    created_at, updated_at
+) VALUES (
+    'admin@dental.com', 
+    @default_pass, 
+    'System', 
+    'Admin', 
+    '09000000001', 
+    @role_admin, 
+    'active', 
+    TRUE, 
+    @now, 
+    @now, 
+    @now
+);
 
--- Update permissions for patients
-INSERT INTO permissions (name, display_name, resource, action) VALUES
-('patients.create', 'Create Patients', 'patients', 'create'),
-('patients.read', 'View Patients', 'patients', 'read'),
-('patients.update', 'Update Patients', 'patients', 'update'),
-('patients.delete', 'Delete Patients', 'patients', 'delete'),
-('patients.manage_documents', 'Manage Patient Documents', 'patients', 'manage_documents'),
-('patients.view_medical_history', 'View Medical History', 'patients', 'view_medical_history')
-ON DUPLICATE KEY UPDATE name=name;
+-- Capture Admin ID for 'created_by' fields
+SET @admin_id = LAST_INSERT_ID();
+
+-- 2.2 Create a Dentist (Dr. Smile)
+INSERT INTO users (
+    email, password_hash, first_name, last_name, phone, 
+    role_id, status, email_verified, email_verified_at, 
+    created_by, created_at, updated_at
+) VALUES (
+    'dr.smile@dental.com', 
+    @default_pass, 
+    'John', 
+    'Smile', 
+    '09000000002', 
+    @role_dentist, 
+    'active', 
+    TRUE, 
+    @now, 
+    @admin_id,
+    @now, 
+    @now
+);
+
+SET @dentist_id = LAST_INSERT_ID();
+
+-- 2.3 Create a Receptionist (Pam)
+INSERT INTO users (
+    email, password_hash, first_name, last_name, phone, 
+    role_id, status, email_verified, email_verified_at, 
+    created_by, created_at, updated_at
+) VALUES (
+    'reception@dental.com', 
+    @default_pass, 
+    'Pam', 
+    'Beesly', 
+    '09000000003', 
+    @role_receptionist, 
+    'active', 
+    TRUE, 
+    @now, 
+    @admin_id,
+    @now, 
+    @now
+);
+
+SET @receptionist_id = LAST_INSERT_ID();
+
+-- -----------------------------------
+-- 3. SEED DENTIST SCHEDULE
+-- -----------------------------------
+-- Give Dr. Smile a schedule: Mon-Fri, 9 AM - 5 PM, Lunch 12-1
+INSERT INTO dentist_schedules (
+    dentist_id, day_of_week, start_time, end_time, break_start_time, break_end_time, is_active
+) VALUES 
+(@dentist_id, 'monday',    '09:00:00', '17:00:00', '12:00:00', '13:00:00', TRUE),
+(@dentist_id, 'tuesday',   '09:00:00', '17:00:00', '12:00:00', '13:00:00', TRUE),
+(@dentist_id, 'wednesday', '09:00:00', '17:00:00', '12:00:00', '13:00:00', TRUE),
+(@dentist_id, 'thursday',  '09:00:00', '17:00:00', '12:00:00', '13:00:00', TRUE),
+(@dentist_id, 'friday',    '09:00:00', '17:00:00', '12:00:00', '13:00:00', TRUE);
+
+-- -----------------------------------
+-- 4. SEED SAMPLE PATIENT
+-- -----------------------------------
+INSERT INTO patients (
+    patient_number, first_name, last_name, date_of_birth, gender, 
+    blood_type, email, phone, address_line1, city, 
+    status, created_by, created_at
+) VALUES (
+    'PAT-2024-001', 
+    'Michael', 
+    'Scott', 
+    '1980-03-15', 
+    'male', 
+    'O+', 
+    'patient@dental.com', 
+    '09000000004', 
+    '123 Paper St.', 
+    'Scranton', 
+    'active', 
+    @receptionist_id,
+    @now
+);
+
+SET @patient_id = LAST_INSERT_ID();
+
+-- -----------------------------------
+-- 5. SEED SAMPLE APPOINTMENT
+-- -----------------------------------
+-- Create an appointment for tomorrow at 10 AM
+INSERT INTO appointments (
+    appointment_number, patient_id, dentist_id, 
+    appointment_date, start_time, end_time, duration, 
+    appointment_type, status, reason, created_by, created_at
+) VALUES (
+    'APT-1001', 
+    @patient_id, 
+    @dentist_id, 
+    CURDATE() + INTERVAL 1 DAY, -- Tomorrow
+    '10:00:00', 
+    '11:00:00', 
+    60, 
+    'checkup', 
+    'confirmed', 
+    'Initial dental checkup and cleaning', 
+    @receptionist_id,
+    @now
+);
+
+-- Re-enable foreign key checks
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- Output confirmation
+SELECT '✅ Seed data inserted successfully!' as status,
+       'Password for all users is: password' as credentials;
+
+SELECT id, email, role_id FROM users;

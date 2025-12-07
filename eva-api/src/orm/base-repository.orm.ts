@@ -30,8 +30,30 @@ export abstract class BaseRepository<T extends BaseEntity> implements Repository
   // Connection is readonly to enforce using withTransaction() for mutations
   protected readonly connection?: PoolConnection;
 
+  // Set this to 'false' in repositories like AuditLogs or LoginAttempts
+  protected useTimestamps = true; 
+  
+  // Set this to 'false' if a table does not support Soft Deletes
+  protected useSoftDeletes = true;
+
   constructor(connection?: PoolConnection) {
     this.connection = connection;
+  }
+
+  protected newQuery(): QueryBuilder<T> {
+    return new QueryBuilder<T>(this.tableName, this.connection);
+  }
+
+  private cleanForDb(data: any): any {
+    const clean: any = {};
+    for (const key in data) {
+      if (Object.prototype.hasOwnProperty.call(data, key)) {
+        // MAGIC LINE: If value is undefined, force it to NULL.
+        // Otherwise, keep it as is (including 0, false, empty string)
+        clean[key] = data[key] === undefined ? null : data[key];
+      }
+    }
+    return clean;
   }
 
   /**
@@ -45,9 +67,6 @@ export abstract class BaseRepository<T extends BaseEntity> implements Repository
     return new Constructor(connection);
   }
 
-  protected newQuery(): QueryBuilder<T> {
-    return new QueryBuilder<T>(this.tableName, this.connection);
-  }
 
   // --- Scopes (Default Filters) ---
 
@@ -108,61 +127,64 @@ export abstract class BaseRepository<T extends BaseEntity> implements Repository
   // --- Write Operations (With Hooks) ---
 
   async create(data: Partial<T>): Promise<T> {
-    // 1. Hook: Before Create
-    const processedData = this.beforeCreate ? await this.beforeCreate(data) : data;
+    // 1. Apply Hooks (if any)
+    const processedData = (this as any).beforeCreate ? await (this as any).beforeCreate(data) : data;
 
     const now = new Date();
-    const insertData = {
+    
+    // 2. Prepare Data
+    const rawData = {
       ...processedData,
       created_at: now,
-      updated_at: now,
     };
 
-    // 2. Perform Insert
+    // 3. Conditionally Add updated_at
+    if (this.useTimestamps) {
+      rawData.updated_at = now;
+    }
+
+    // 4. SANITIZE (Crucial Step)
+    const insertData = this.cleanForDb(rawData);
+
+    // 5. Execute
     const id = await this.newQuery().insert(insertData);
 
-    // 3. Return complete object
+    // 6. Return
     const createdItem = { ...insertData, id } as T;
-
-    // 4. Hook: After Create
-    if (this.afterCreate) await this.afterCreate(createdItem);
-
+    if ((this as any).afterCreate) await (this as any).afterCreate(createdItem);
     return createdItem;
   }
 
   async createMany(data: Partial<T>[]): Promise<number> {
     if (data.length === 0) return 0;
-    
     const now = new Date();
-    const insertData = data.map(item => ({
-      ...item,
-      created_at: now,
-      updated_at: now
-    }));
+
+    const insertData = data.map(item => {
+      const row: any = { ...item, created_at: now };
+      if (this.useTimestamps) row.updated_at = now;
+      return this.cleanForDb(row); // Sanitize every row
+    });
 
     return this.newQuery().insertMany(insertData);
   }
+  async update(id: number, data: Partial<T>): Promise<boolean> {
+    const processedData = (this as any).beforeUpdate ? await (this as any).beforeUpdate(id, data) : data;
 
-  async update(id: number, data: Partial<T>, updatedBy?: number): Promise<boolean> {
-    // 1. Hook: Before Update
-    const processedData = this.beforeUpdate ? await this.beforeUpdate(id, data) : data;
+    const updateData: any = { ...processedData };
+    
+    // Only update timestamp if configured
+    if (this.useTimestamps) {
+      updateData.updated_at = new Date();
+    }
 
-    const updateData = {
-      ...processedData,
-      updated_at: new Date(),
-      ...(updatedBy && { updated_by: updatedBy }),
-    };
+    // Sanitize
+    const cleanData = this.cleanForDb(updateData);
 
-    // 2. Perform Update
-    const affectedRows = await this.newQuery()
-      .where('id', '=', id)
-      .whereNull('deleted_at')
-      .update(updateData);
+    const query = this.newQuery().where('id', '=', id);
+    if (this.useSoftDeletes) query.whereNull('deleted_at');
 
-    // 3. Hook: After Update
-    if (this.afterUpdate && affectedRows > 0) await this.afterUpdate(id, updateData);
-
-    return affectedRows > 0;
+    const affected = await query.update(cleanData);
+    return affected > 0;
   }
 
   /**

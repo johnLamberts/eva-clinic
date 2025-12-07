@@ -6,6 +6,8 @@ import { RefreshTokenRepository } from "./refresh-token.repository";
 
 @Service()
 export class TokenManager {
+  protected useTimestamps = false;
+
   constructor(private tokenRepo: RefreshTokenRepository) {}
 
   async createSession(user: IUser, ip: string, ua: string) {
@@ -16,11 +18,16 @@ export class TokenManager {
       roleId: user.role_id,
     });
 
-    // 2. Persist Refresh Token
+    // 2. Calculate Expiry (7 days)
+    const expiryDate = new Date(Date.now() + 7 * 86400000);
+
+    // 3. Persist
     await this.tokenRepo.create({
       user_id: user.id,
       token_hash: AuthSecurity.hashToken(pair.refreshToken),
-      expires_at: new Date(Date.now() + 7 * 86400000).toISOString(), // 7 days
+      
+      expires_at: expiryDate.toISOString().slice(0, 19).replace('T', ' '),
+      
       ip_address: ip,
       device_info: ua,
     });

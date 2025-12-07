@@ -3,6 +3,7 @@ import { PasswordHistory } from "../users/user.type";
 
 export class PasswordHistoryRepository extends BaseRepository<PasswordHistory> {
   protected tableName = 'password_history';
+  protected useTimestamps = false;
 
   async getUserPasswordHistory(userId: number, limit = 5): Promise<PasswordHistory[]> {
     return this.newQuery()

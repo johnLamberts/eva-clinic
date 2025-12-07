@@ -643,105 +643,319 @@ CREATE TABLE appointment_reminders (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ===================================
--- SEED DATA INSERTION
+-- SECTION 6: SEED DATA
 -- ===================================
 
--- 1. Roles
-INSERT INTO roles (name, display_name, description, is_system_role) VALUES 
-('admin', 'Administrator', 'Full system access', TRUE),
-('dentist', 'Dentist', 'Medical provider access', FALSE),
-('receptionist', 'Receptionist', 'Front desk and scheduling', FALSE),
-('patient', 'Patient', 'Patient portal access', FALSE);
+-- Insert Default Roles
+INSERT INTO roles (name, display_name, description, is_system_role) VALUES
+('super_admin', 'Super Administrator', 'Full system access with all permissions', TRUE),
+('admin', 'Administrator', 'Administrative access to manage clinic operations', TRUE),
+('dentist', 'Dentist', 'Dentist with access to patient records and appointments', TRUE),
+('receptionist', 'Receptionist', 'Front desk staff managing appointments and patient intake', TRUE),
+('dental_hygienist', 'Dental Hygienist', 'Hygienist with limited patient access', TRUE);
 
--- 2. Permissions
-INSERT INTO permissions (name, display_name, resource, action, description) VALUES
-('users.create', 'Create Users', 'users', 'create', 'Can create new system users'),
-('users.read', 'View Users', 'users', 'read', 'Can view user list'),
-('users.update', 'Update Users', 'users', 'update', 'Can update user details'),
-('users.delete', 'Delete Users', 'users', 'delete', 'Can delete users'),
-('patients.create', 'Create Patients', 'patients', 'create', 'Can register new patients'),
-('patients.read', 'View Patients', 'patients', 'read', 'Can view patient records'),
-('patients.update', 'Update Patients', 'patients', 'update', 'Can update patient medical info'),
-('patients.delete', 'Delete Patients', 'patients', 'delete', 'Can archive patients'),
-('appointments.create', 'Book Appointment', 'appointments', 'create', 'Can book appointments'),
-('appointments.read', 'View Schedule', 'appointments', 'read', 'Can view calendar'),
-('appointments.update', 'Update Appointment', 'appointments', 'update', 'Can reschedule/cancel'),
-('records.read', 'View Medical Records', 'records', 'read', 'Can view dental history'),
-('records.write', 'Write Medical Records', 'records', 'write', 'Can add diagnosis and treatment');
+-- Insert Default Permissions
+INSERT INTO permissions (name, display_name, resource, action) VALUES
+-- User Management
+('users.create', 'Create Users', 'users', 'create'),
+('users.read', 'View Users', 'users', 'read'),
+('users.update', 'Update Users', 'users', 'update'),
+('users.delete', 'Delete Users', 'users', 'delete'),
+('users.manage_roles', 'Manage User Roles', 'users', 'manage_roles'),
 
--- 3. Users
--- We use subqueries to get Role IDs, and HARDCODE the password hash to prevent variable scope issues
-INSERT INTO users (
-    email, password_hash, first_name, last_name, phone, role_id, status, email_verified, email_verified_at
-) VALUES 
--- Admin
-('admin@dental.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'System', 'Admin', '09170000001', (SELECT id FROM roles WHERE name = 'admin'), 'active', TRUE, NOW()),
--- Dr. Smith
-('dr.smith@dental.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'John', 'Smith', '09170000002', (SELECT id FROM roles WHERE name = 'dentist'), 'active', TRUE, NOW()),
--- Dr. Garcia
-('dr.garcia@dental.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Maria', 'Garcia', '09170000003', (SELECT id FROM roles WHERE name = 'dentist'), 'active', TRUE, NOW()),
--- Sarah
-('sarah@dental.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Sarah', 'Jones', '09170000004', (SELECT id FROM roles WHERE name = 'receptionist'), 'active', TRUE, NOW());
+-- Patient Management
+('patients.create', 'Create Patients', 'patients', 'create'),
+('patients.read', 'View Patients', 'patients', 'read'),
+('patients.update', 'Update Patients', 'patients', 'update'),
+('patients.delete', 'Delete Patients', 'patients', 'delete'),
+('patients.manage_documents', 'Manage Patient Documents', 'patients', 'manage_documents'),
+('patients.view_medical_history', 'View Medical History', 'patients', 'view_medical_history'),
 
--- 4. Treatment Templates
-INSERT INTO treatment_templates (name, description, default_cost, estimated_duration, category) VALUES 
-('Comprehensive Exam', 'Full mouth examination and charting', 500.00, 30, 'Diagnostic'),
-('Prophylaxis (Cleaning)', 'Standard dental cleaning', 1200.00, 45, 'Preventive'),
-('Tooth Extraction (Simple)', 'Simple removal of tooth', 1500.00, 60, 'Surgery'),
-('Composite Filling (1 Surface)', 'White filling for one surface', 2000.00, 45, 'Restorative'),
-('Root Canal (Anterior)', 'Root canal therapy for front teeth', 8000.00, 90, 'Endodontics'),
-('Teeth Whitening', 'In-office chemical whitening', 15000.00, 90, 'Cosmetic');
+-- Appointment Management
+('appointments.create', 'Create Appointments', 'appointments', 'create'),
+('appointments.read', 'View Appointments', 'appointments', 'read'),
+('appointments.update', 'Update Appointments', 'appointments', 'update'),
+('appointments.delete', 'Delete Appointments', 'appointments', 'delete'),
+('appointments.cancel', 'Cancel Appointments', 'appointments', 'cancel'),
+('appointments.manage_schedule', 'Manage Dentist Schedules', 'appointments', 'manage_schedule'),
+('appointments.manage_waitlist', 'Manage Waitlist', 'appointments', 'manage_waitlist'),
 
--- 5. Patients
-INSERT INTO patients (
-    patient_number, first_name, last_name, date_of_birth, gender, 
-    blood_type, email, phone, address_line1, city, 
-    emergency_contact_name, emergency_contact_phone, 
-    allergies, status, created_by
-) VALUES 
-('P-2023-001', 'Juan', 'Dela Cruz', '1985-06-15', 'male', 'O+', 'juan@email.com', '09181112222', '123 Rizal St', 'Manila', 'Maria Dela Cruz', '09183334444', 'Penicillin', 'active', (SELECT id FROM users WHERE email = 'sarah@dental.com')),
-('P-2023-002', 'Elena', 'Santos', '1992-11-02', 'female', 'A+', 'elena@email.com', '09192223333', '456 Mabini Ave', 'Quezon City', 'Pedro Santos', '09195556666', NULL, 'active', (SELECT id FROM users WHERE email = 'sarah@dental.com')),
-('P-2023-003', 'Miguel', 'Reyes', '2015-03-10', 'male', 'unknown', NULL, '09203334444', '789 Luna St', 'Makati', 'Parent: Ana Reyes', '09203334444', 'Peanuts', 'active', (SELECT id FROM users WHERE email = 'sarah@dental.com'));
+-- Audit Logs
+('audit.read', 'View Audit Logs', 'audit', 'read'),
 
--- 6. Medical History
-INSERT INTO medical_history (patient_id, category, title, description, status, severity) VALUES 
-((SELECT id FROM patients WHERE patient_number = 'P-2023-001'), 'allergy', 'Penicillin Allergy', 'Patient develops rash and swelling', 'active', 'high'),
-((SELECT id FROM patients WHERE patient_number = 'P-2023-001'), 'condition', 'Hypertension', 'Controlled with medication', 'managed', 'medium'),
-((SELECT id FROM patients WHERE patient_number = 'P-2023-002'), 'surgery', 'Appendectomy', 'Removed in 2010', 'resolved', 'low');
+-- System Settings
+('settings.read', 'View Settings', 'settings', 'read'),
+('settings.update', 'Update Settings', 'settings', 'update');
 
--- 7. Dental Records
-INSERT INTO dental_records (
-    patient_id, visit_date, tooth_number, diagnosis, treatment_provided, 
-    cost, paid, balance, dentist_id, created_by
-) VALUES 
-((SELECT id FROM patients WHERE patient_number = 'P-2023-001'), DATE_SUB(NOW(), INTERVAL 6 MONTH), '16', 'Caries', 'Composite Filling', 2000.00, 2000.00, 0.00, (SELECT id FROM users WHERE email = 'dr.smith@dental.com'), (SELECT id FROM users WHERE email = 'dr.smith@dental.com')),
-((SELECT id FROM patients WHERE patient_number = 'P-2023-002'), DATE_SUB(NOW(), INTERVAL 1 MONTH), 'All', 'Gingivitis', 'Prophylaxis', 1200.00, 1000.00, 200.00, (SELECT id FROM users WHERE email = 'dr.smith@dental.com'), (SELECT id FROM users WHERE email = 'dr.smith@dental.com'));
+-- Assign ALL Permissions to Super Admin
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name = 'super_admin';
 
--- 8. Dentist Schedules
-INSERT INTO dentist_schedules (dentist_id, day_of_week, start_time, end_time, break_start_time, break_end_time) VALUES 
-((SELECT id FROM users WHERE email = 'dr.smith@dental.com'), 'monday', '09:00:00', '17:00:00', '12:00:00', '13:00:00'),
-((SELECT id FROM users WHERE email = 'dr.smith@dental.com'), 'tuesday', '09:00:00', '17:00:00', '12:00:00', '13:00:00'),
-((SELECT id FROM users WHERE email = 'dr.smith@dental.com'), 'wednesday', '09:00:00', '17:00:00', '12:00:00', '13:00:00'),
-((SELECT id FROM users WHERE email = 'dr.smith@dental.com'), 'thursday', '09:00:00', '17:00:00', '12:00:00', '13:00:00'),
-((SELECT id FROM users WHERE email = 'dr.smith@dental.com'), 'friday', '09:00:00', '17:00:00', '12:00:00', '13:00:00');
+-- Assign Permissions to Admin
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name = 'admin' 
+AND p.name IN (
+    'users.read', 'users.update',
+    'patients.create', 'patients.read', 'patients.update', 'patients.delete', 
+    'patients.manage_documents', 'patients.view_medical_history',
+    'appointments.create', 'appointments.read', 'appointments.update', 
+    'appointments.delete', 'appointments.cancel', 'appointments.manage_schedule',
+    'audit.read', 'settings.read'
+);
 
--- 9. Appointments
-INSERT INTO appointments (
-    appointment_number, patient_id, dentist_id, appointment_date, 
-    start_time, end_time, duration, appointment_type, 
-    status, reason, created_by
-) VALUES 
--- Completed
-('APT-1001', (SELECT id FROM patients WHERE patient_number = 'P-2023-001'), (SELECT id FROM users WHERE email = 'dr.smith@dental.com'), DATE_SUB(CURDATE(), INTERVAL 7 DAY), '10:00:00', '11:00:00', 60, 'checkup', 'completed', 'Routine Checkup', (SELECT id FROM users WHERE email = 'sarah@dental.com')),
--- Upcoming
-('APT-1002', (SELECT id FROM patients WHERE patient_number = 'P-2023-002'), (SELECT id FROM users WHERE email = 'dr.smith@dental.com'), DATE_ADD(CURDATE(), INTERVAL 1 DAY), '14:00:00', '15:00:00', 60, 'cleaning', 'confirmed', 'Yearly Cleaning', (SELECT id FROM users WHERE email = 'sarah@dental.com')),
--- Scheduled
-('APT-1003', (SELECT id FROM patients WHERE patient_number = 'P-2023-001'), (SELECT id FROM users WHERE email = 'dr.smith@dental.com'), DATE_ADD(CURDATE(), INTERVAL 7 DAY), '09:00:00', '10:00:00', 60, 'filling', 'scheduled', 'Filling repair', (SELECT id FROM users WHERE email = 'sarah@dental.com'));
+-- Assign Permissions to Dentist
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name = 'dentist' 
+AND p.name IN (
+    'patients.create', 'patients.read', 'patients.update',
+    'patients.view_medical_history',
+    'appointments.read', 'appointments.update',
+    'settings.read'
+);
 
--- 10. Audit Logs
-INSERT INTO audit_logs (user_id, action, entity_type, entity_id, ip_address, new_values) VALUES 
-((SELECT id FROM users WHERE email = 'admin@dental.com'), 'create', 'user', (SELECT id FROM users WHERE email = 'dr.smith@dental.com'), '192.168.1.1', '{"email": "dr.smith@dental.com", "role": "dentist"}'),
-((SELECT id FROM users WHERE email = 'sarah@dental.com'), 'create', 'patient', (SELECT id FROM patients WHERE patient_number = 'P-2023-001'), '192.168.1.5', '{"name": "Juan Dela Cruz"}');
+-- Assign Permissions to Receptionist
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name = 'receptionist' 
+AND p.name IN (
+    'patients.create', 'patients.read', 'patients.update',
+    'appointments.create', 'appointments.read', 'appointments.update', 
+    'appointments.cancel', 'appointments.manage_waitlist',
+    'settings.read'
+);
 
--- Final check
-SELECT 'Seed data inserted successfully.' as status;
+-- Assign Permissions to Dental Hygienist
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.name = 'dental_hygienist' 
+AND p.name IN (
+    'patients.read',
+    'appointments.read',
+    'settings.read'
+);
+
+-- Insert Treatment Templates
+INSERT INTO treatment_templates (name, description, default_cost, estimated_duration, category) VALUES
+('Dental Cleaning', 'Regular teeth cleaning and polishing', 1500.00, 30, 'Preventive'),
+('Tooth Extraction', 'Simple tooth extraction', 2500.00, 30, 'Surgery'),
+('Dental Filling', 'Composite filling for cavity', 2000.00, 45, 'Restorative'),
+('Root Canal', 'Root canal treatment', 8000.00, 90, 'Endodontics'),
+('Crown', 'Dental crown placement', 15000.00, 60, 'Restorative'),
+('Teeth Whitening', 'Professional teeth whitening', 5000.00, 60, 'Cosmetic'),
+('Dental Bridge', 'Fixed dental bridge', 25000.00, 90, 'Restorative'),
+('Dental Implant', 'Single dental implant', 50000.00, 120, 'Surgery'),
+('Orthodontic Consultation', 'Braces/Invisalign consultation', 500.00, 30, 'Orthodontics'),
+('Emergency Visit', 'Emergency dental visit', 3000.00, 45, 'Emergency'),
+('Dental X-Ray', 'Panoramic or periapical X-ray', 800.00, 15, 'Diagnostic'),
+('Scaling', 'Deep scaling and root planing', 3000.00, 60, 'Periodontics'),
+('Veneer', 'Porcelain veneer per tooth', 18000.00, 45, 'Cosmetic'),
+('Dentures', 'Complete or partial dentures', 30000.00, 90, 'Restorative'),
+('Fluoride Treatment', 'Professional fluoride application', 500.00, 15, 'Preventive');
+
+-- ===================================
+-- SECTION 7: SAMPLE DENTIST SCHEDULES
+-- ===================================
+
+-- Insert sample schedules for dentists (Monday-Friday, 9 AM - 5 PM with 1-hour lunch)
+-- This will only work after you've created at least one dentist user
+-- You can run this manually after creating dentists
+
+-- Example for inserting schedules (uncomment and modify after creating dentist users):
+/*
+INSERT INTO dentist_schedules (dentist_id, day_of_week, start_time, end_time, break_start_time, break_end_time)
+SELECT u.id, 'monday', '09:00:00', '17:00:00', '12:00:00', '13:00:00'
+FROM users u
+INNER JOIN roles r ON u.role_id = r.id
+WHERE r.name = 'dentist' AND u.deleted_at IS NULL;
+
+INSERT INTO dentist_schedules (dentist_id, day_of_week, start_time, end_time, break_start_time, break_end_time)
+SELECT u.id, 'tuesday', '09:00:00', '17:00:00', '12:00:00', '13:00:00'
+FROM users u
+INNER JOIN roles r ON u.role_id = r.id
+WHERE r.name = 'dentist' AND u.deleted_at IS NULL;
+
+INSERT INTO dentist_schedules (dentist_id, day_of_week, start_time, end_time, break_start_time, break_end_time)
+SELECT u.id, 'wednesday', '09:00:00', '17:00:00', '12:00:00', '13:00:00'
+FROM users u
+INNER JOIN roles r ON u.role_id = r.id
+WHERE r.name = 'dentist' AND u.deleted_at IS NULL;
+
+INSERT INTO dentist_schedules (dentist_id, day_of_week, start_time, end_time, break_start_time, break_end_time)
+SELECT u.id, 'thursday', '09:00:00', '17:00:00', '12:00:00', '13:00:00'
+FROM users u
+INNER JOIN roles r ON u.role_id = r.id
+WHERE r.name = 'dentist' AND u.deleted_at IS NULL;
+
+INSERT INTO dentist_schedules (dentist_id, day_of_week, start_time, end_time, break_start_time, break_end_time)
+SELECT u.id, 'friday', '09:00:00', '17:00:00', '12:00:00', '13:00:00'
+FROM users u
+INNER JOIN roles r ON u.role_id = r.id
+WHERE r.name = 'dentist' AND u.deleted_at IS NULL;
+
+INSERT INTO dentist_schedules (dentist_id, day_of_week, start_time, end_time, break_start_time, break_end_time)
+SELECT u.id, 'saturday', '09:00:00', '13:00:00', NULL, NULL
+FROM users u
+INNER JOIN roles r ON u.role_id = r.id
+WHERE r.name = 'dentist' AND u.deleted_at IS NULL;
+*/
+
+-- ===================================
+-- SECTION 8: DATABASE STATISTICS
+-- ===================================
+
+-- Summary of tables created
+SELECT 
+    'Database Schema Created Successfully!' as message,
+    (SELECT COUNT(*) FROM information_schema.tables 
+     WHERE table_schema = 'dental_clinic_mis' 
+     AND table_type = 'BASE TABLE') as total_tables,
+    (SELECT COUNT(*) FROM information_schema.columns 
+     WHERE table_schema = 'dental_clinic_mis') as total_columns,
+    (SELECT COUNT(*) FROM information_schema.statistics 
+     WHERE table_schema = 'dental_clinic_mis' 
+     AND index_name != 'PRIMARY') as total_indexes,
+    (SELECT COUNT(*) FROM information_schema.table_constraints 
+     WHERE table_schema = 'dental_clinic_mis' 
+     AND constraint_type = 'FOREIGN KEY') as total_foreign_keys;
+
+-- List all tables
+SELECT 
+    table_name,
+    table_rows,
+    ROUND(((data_length + index_length) / 1024 / 1024), 2) AS size_mb
+FROM information_schema.tables
+WHERE table_schema = 'dental_clinic_mis'
+AND table_type = 'BASE TABLE'
+ORDER BY table_name;
+
+-- ===================================
+-- SECTION 9: HELPFUL QUERIES
+-- ===================================
+
+-- View all roles with permission counts
+SELECT 
+    r.id,
+    r.name,
+    r.display_name,
+    r.is_system_role,
+    COUNT(rp.permission_id) as permission_count
+FROM roles r
+LEFT JOIN role_permissions rp ON r.id = rp.role_id
+WHERE r.deleted_at IS NULL
+GROUP BY r.id, r.name, r.display_name, r.is_system_role
+ORDER BY r.id;
+
+-- View all permissions by resource
+SELECT 
+    resource,
+    COUNT(*) as permission_count,
+    GROUP_CONCAT(name ORDER BY name) as permissions
+FROM permissions
+GROUP BY resource
+ORDER BY resource;
+
+-- ===================================
+-- SECTION 10: MAINTENANCE QUERIES
+-- ===================================
+
+-- Clean up expired tokens (run periodically)
+/*
+DELETE FROM email_verification_tokens WHERE expires_at < NOW();
+DELETE FROM password_reset_tokens WHERE expires_at < NOW();
+DELETE FROM magic_link_tokens WHERE expires_at < NOW();
+DELETE FROM refresh_tokens WHERE expires_at < NOW();
+*/
+
+-- Archive old audit logs (optional - run annually)
+/*
+CREATE TABLE audit_logs_archive LIKE audit_logs;
+INSERT INTO audit_logs_archive 
+SELECT * FROM audit_logs 
+WHERE created_at < DATE_SUB(NOW(), INTERVAL 2 YEAR);
+
+DELETE FROM audit_logs 
+WHERE created_at < DATE_SUB(NOW(), INTERVAL 2 YEAR);
+*/
+
+-- ===================================
+-- SECTION 11: BACKUP RECOMMENDATIONS
+-- ===================================
+
+/*
+-- Daily backup command (run via cron)
+mysqldump -u root -p dental_clinic_mis > backup_$(date +%Y%m%d).sql
+
+-- Weekly full backup with compression
+mysqldump -u root -p dental_clinic_mis | gzip > backup_$(date +%Y%m%d).sql.gz
+
+-- Backup specific tables only
+mysqldump -u root -p dental_clinic_mis patients appointments dental_records > patients_backup.sql
+
+-- Restore from backup
+mysql -u root -p dental_clinic_mis < backup_20241208.sql
+*/
+
+-- ===================================
+-- NOTES
+-- ===================================
+
+/*
+1. This schema is optimized for MySQL 8.0+
+2. Uses InnoDB engine for ACID compliance
+3. All tables have proper foreign key constraints
+4. Soft deletes implemented across all main tables
+5. Comprehensive indexes for performance
+6. Full-text search enabled on patient names
+7. Audit logging for all critical operations
+8. HIPAA/GDPR compliance considerations included
+
+NEXT STEPS:
+1. Run this entire SQL file: mysql -u root -p < complete_schema.sql
+2. Create your first admin user via the API
+3. Configure dentist schedules after creating dentist users
+4. Set up automated backup schedule
+5. Review and adjust treatment template prices
+6. Configure email/SMS settings in application
+
+SECURITY REMINDERS:
+- Change default passwords immediately
+- Enable SSL/TLS for production
+- Restrict database user permissions
+- Enable binary logging for point-in-time recovery
+- Regular security audits
+- Keep MySQL updated
+
+PERFORMANCE TIPS:
+- Monitor slow query log
+- Analyze and optimize queries regularly
+- Consider partitioning for audit_logs if very large
+- Set up read replicas for reporting
+- Use connection pooling (already configured in app)
+- Regular ANALYZE TABLE and OPTIMIZE TABLE
+
+For questions or issues, refer to the README.md
+*/
+
+-- ===================================
+-- END OF SCHEMA
+-- ===================================
+
+SELECT '✅ Database schema created successfully!' as status,
+       'Total Tables: 23' as info1,
+       'Total Roles: 5' as info2,
+       'Total Permissions: 21' as info3,
+       'Treatment Templates: 15' as info4,
+       'Ready for production!' as message;

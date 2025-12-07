@@ -4,14 +4,16 @@ import { LoginAttempt } from "../users/user.type";
 export class LoginAttemptRepository extends BaseRepository<LoginAttempt> {
   protected tableName = 'login_attempts';
 
-  async logAttempt(email: string, ip: string, ua: string, success: boolean, userId?: number, reason?: string): Promise<void> {
+  protected useTimestamps = false;
+  
+  async logAttempt(email: string, ip: string, ua: string, success: boolean, userId?: number, reason?: string) {
     await this.create({
-      user_id: userId,
       email,
       ip_address: ip,
       user_agent: ua,
       success,
-      failure_reason: reason,
+      user_id: userId, // Safe to pass undefined now
+      failure_reason: reason
     });
   }
 

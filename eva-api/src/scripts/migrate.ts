@@ -23,7 +23,7 @@ async function runMigrations() {
 
     // 2. Read the SQL file
     // Adjust the path to match where your SQL file is located
-    const sqlPath = path.join(__dirname, '../../databases/001_authentication_user_mgm.sql');
+    const sqlPath = path.join(__dirname, '../../databases/002_patient.sql');
     
     if (!fs.existsSync(sqlPath)) {
       throw new Error(`Migration file not found at: ${sqlPath}`);

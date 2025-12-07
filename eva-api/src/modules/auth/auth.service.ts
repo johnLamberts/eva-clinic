@@ -11,6 +11,8 @@ import { TokenManager } from "./token.manager";
 
 @Service()
 export class AuthService {
+
+  
   constructor(
     private userRepo: UserRepository,
     private roleRepo: RoleRepository,
@@ -18,6 +20,8 @@ export class AuthService {
     private guard: LoginGuard,
     private tokenManager: TokenManager
   ) { }
+
+
 
   async login(dto: LoginDto, ip: string, ua: string): Promise<AuthResponse> {
     // 1. Guard checks
@@ -50,32 +54,60 @@ export class AuthService {
     return { user: this.mapUser(user) as any, ...token }
   }
 
-  async register(dto: CreateUserDto): Promise<AuthResponse> {
-    return Transaction.transaction(async () => {
-      // 1. Validations
-      if (await this.userRepo.isEmailTaken(dto.email)) throw new AppError('Email taken', 409);
-      if (!AuthSecurity.validatePassword(dto.password).valid) throw new AppError('Weak password', 400);
+// src/modules/auth/auth.service.ts
 
-      // 2. Create User
-      const hash = await AuthSecurity.hashPassword(dto.password);
-      const userId = await this.userRepo.create({
-        ...dto,
-        password_hash: hash,
-        status: UserStatus.ACTIVE,
-        password_changed_at: new Date().toISOString()
-      });
+async register(dto: CreateUserDto): Promise<AuthResponse> {
+  return Transaction.transaction(async () => {
+    // 1. Validations
+    if (await this.userRepo.isEmailTaken(dto.email)) throw new AppError('Email taken', 409);
+    
+    // Check if Role Exists (Optional safety check)
+    const role = await this.roleRepo.findById(dto.role_id);
+    if (!role) throw new AppError('Invalid Role ID', 400);
 
-      // 3. History & Setup
-      await this.passwordHistoryRepo.addPasswordHistory(userId.id, hash);
-      
-      const user = await this.userRepo.findByEmailWithRole(dto.email);
-      
-      // 4. Auto-Login
-      const tokens = await this.tokenManager.createSession(user!, 'system', 'register');
+    // ... Hash password ...
+    const hash = await AuthSecurity.hashPassword(dto.password);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...userData } = dto;
 
-      return { user: this.mapUser(user!), ...tokens };
+    const roleExists = await this.roleRepo.findById(dto.role_id);
+    if (!roleExists) {
+      throw new AppError(`Role with ID ${dto.role_id} not found`, 400);
+    }
+
+    // 2. Create User
+    const createdUser = await this.userRepo.create({
+      ...userData,
+      password_hash: hash,
+      status: UserStatus.ACTIVE,
+      password_changed_at: new Date() // Fix from previous step
     });
-  }
+
+    // 3. History
+    await this.passwordHistoryRepo.addPasswordHistory(createdUser.id!, hash);
+    
+    // 4. Fetch the Complete User (With Role Join)
+    // We use findByIdWithRole (create this if missing) or rely on findByEmail
+    const fullUser: IUser & { role: Role } = {
+      ...createdUser,
+      id: createdUser.id!, // Ensure ID is present
+      role: role // We fetched this in Step 2
+    };
+
+    // 🚨 DEBUGGING: If this throws "User not found" here, it confirms the JOIN issue
+    console.log(fullUser);
+
+    if (!fullUser) {
+      throw new AppError('User created but failed to retrieve details. Check Role ID.', 500);
+    }
+
+
+    // 5. Auto-Login
+    const tokens = await this.tokenManager.createSession(fullUser, 'system', 'register');
+
+    return { user: this.mapUser(fullUser), ...tokens };
+  });
+}
 
   async refreshToken(token: string): Promise<AuthResponse> {
     // 1. Rotate Logic

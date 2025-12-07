@@ -22,7 +22,18 @@ export class UserRepository extends BaseRepository<IUser> {
     const result = await query.first();
     if(!result) return null;
 
-    return result as IUser & { role: Role};
+    const userWithRole = {
+      ...result,
+      role: {
+        id: result.role_id,
+        name: result.role_name,
+        display_name: result.role_display_name,
+        description: result.role_description,
+        is_system_role: result.role_is_system_role
+      }
+    };
+
+    return userWithRole as IUser & { role: Role };
   }
 
   async getUserPermissions(userId: number): Promise<Permission[]> {
@@ -44,8 +55,7 @@ export class UserRepository extends BaseRepository<IUser> {
   async lockAccount(userId: number, lockUntil: Date): Promise<void> {
     await this.update(userId, {
       status: UserStatus.LOCKED,
-      locked_until: lockUntil.toISOString()
-    })
+      locked_until: lockUntil.toISOString().slice(0, 19).replace('T', ' ')    })
   }
 
   async resetFailedLoginAttempts(userId: number): Promise<void> {
@@ -60,7 +70,8 @@ export class UserRepository extends BaseRepository<IUser> {
   }
 
   async updateLastLogin(userId: number): Promise<void> {
-    await this.update(userId, { last_login_at: new Date().toISOString() });
+    const mysqlDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    await this.update(userId, { last_login_at: mysqlDate });
   }
 
   async isEmailTaken(email: string, excludeUserId?: number): Promise<boolean> {

@@ -21,7 +21,7 @@ export interface IUser extends BaseEntity {
   last_login_at?: string;
   failed_login_attempts: number;
   locked_until?: string;
-  password_changed_at: string;
+  password_changed_at: Date;
   must_change_password: boolean;
   two_factor_enabled: boolean;
   two_factor_secret?: string;
@@ -89,7 +89,7 @@ export interface LoginAttempt extends BaseEntity {
   user_agent: string;
   success: boolean;
   failure_reason?: string;
-  created_at: string;
+  created_at: Date;
 }
 
 

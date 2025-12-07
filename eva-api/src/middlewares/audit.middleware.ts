@@ -106,28 +106,43 @@ let newValues = rawResponseBody;
   }
 
   private extractEntityInfo(req: Request): { entityType: string; entityId: number | string | null } {
-    // 1. Try to use the Route Pattern (e.g., "/api/users/:id") if available
-    // This is much more reliable than splitting the string
-    const routePath = req.route?.path; 
-    
-    if (routePath) {
-        // clean up slashes and params
-        // e.g. "/users/:id" -> "users"
-        const type = routePath.split('/').filter((p: string) => p && !p.startsWith(':'))[0];
-        return { 
-            entityType: type || 'unknown',
-            entityId: req.params.id ? req.params.id : null 
-        };
-    }
+    try {
+      // 1. Defensively get params (default to empty object if undefined)
+      const params = req.params || {};
 
-    // Fallback: Manual URL parsing (as you had before)
-    const pathParts = req.path.split('/').filter(Boolean);
-    if (pathParts[0] === 'api' || pathParts[0].startsWith('v')) pathParts.shift();
-    
-    return { 
-        entityType: pathParts[0] || 'unknown', 
-        entityId: pathParts[1] || null 
-    };
+      // 2. Try to use the Route Pattern (e.g., "/users/:id")
+      const routePath = req.route?.path; 
+      
+      if (routePath) {
+          // Clean up slashes and route params to find the "resource" name
+          // e.g. "/users/:id" -> "users"
+          const type = routePath.split('/').filter((p: string) => p && !p.startsWith(':'))[0];
+          
+          return { 
+              entityType: type || 'unknown',
+              // Safely access id from the safe 'params' object
+              entityId: params.id ? params.id : null 
+          };
+      }
+
+      // 3. Fallback: Manual URL parsing if req.route is missing
+      const pathParts = req.path.split('/').filter(Boolean);
+      
+      // Remove 'api' or 'v1' prefixes if they exist
+      if (pathParts.length > 0 && (pathParts[0] === 'api' || pathParts[0].startsWith('v'))) {
+        pathParts.shift();
+      }
+      
+      return { 
+          entityType: pathParts[0] || 'unknown', 
+          entityId: pathParts[1] || null 
+      };
+
+    } catch (error) {
+      // 4. Safety Net: If anything fails, return unknown rather than crashing the server
+      console.warn('[AuditMiddleware] Failed to extract entity info:', error);
+      return { entityType: 'unknown', entityId: null };
+    }
   }
 
   /**
