@@ -1,0 +1,76 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Testing
+coverage/
+.nyc_output/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+.history/
+
+# Temporary files
+*.tmp
+.cache/
+
+// ============================================
+// .npmignore
+// ============================================
+# Source files
+src/
+tests/
+examples/
+
+# Configuration
+tsconfig.json
+tsconfig.build.json
+jest.config.js
+.eslintrc.js
+.prettierrc
+.prettierignore
+
+# Development
+.git/
+.github/
+node_modules/
+coverage/
+
+# Environment
+.env
+.env.*
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# Documentation (keep only main README in package)
+docs/
