@@ -41,17 +41,18 @@ export class UserService {
     return Transaction.transaction(async () => {
       // 1. Validations
       if (await this.userRepo.isEmailTaken(dto.email)) throw new AppError('Email already in use', 409);
-      await this.validateRole(dto.role_id, ctx, false); // false = is not update
-      
+      const role = await this.validateRole(dto.role_id, ctx, false);
+
       const passValidation = AuthSecurity.validatePassword(dto.password);
       if (!passValidation.valid) throw new AppError(`Password weak: ${passValidation.errors.join(', ')}`, 400);
 
       // 2. Prepare Data
       const passwordHash = await AuthSecurity.hashPassword(dto.password);
-      
+      const { password, ...safeUserData } = dto;
+
       // 3. Create User
       const newUser = await this.userRepo.create({
-        ...dto,
+        ...safeUserData,
         password_hash: passwordHash,
         status: UserStatus.ACTIVE,
         password_changed_at: this.getMySQLDate(), // ✅ FIX: Prevents SQL Error
@@ -62,8 +63,15 @@ export class UserService {
       await this.passwordHistoryRepo.addPasswordHistory(newUser.id!, passwordHash);
       
       // 5. Fetch Complete User & Log
-      const fullUser = await this.getFullUserOrThrow(newUser.id!);
-      
+      const fullUser = {
+        ...newUser,
+        role_id: role.id!, // Ensure foreign keys align
+        role_name: role.name,
+        role_display_name: role.display_name,
+        // If your mapper expects a nested role object:
+        role: role 
+      };
+
       await this.logAudit(ctx, 'create', newUser.id!, {
         email: fullUser.email,
         name: `${fullUser.first_name} ${fullUser.last_name}`,

@@ -8,7 +8,7 @@ export class AuditRepository extends BaseRepository<AuditLog> {
   protected tableName = 'audit_logs';
 
   protected useTimestamps = false;
-  
+  protected useSoftDeletes = false;
   /**
    * Optimized Search with Database Pagination
    */
