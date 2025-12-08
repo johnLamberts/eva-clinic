@@ -6,6 +6,7 @@ import hpp from 'hpp';
 import auditMiddleware from './middlewares/audit.middleware';
 import { errorHandler, notFoundHandler } from './middlewares/error.middleware';
 import { authRoutes } from './modules/auth/auth.route';
+import { userRoutes } from './modules/users/user.route';
 import logger from './utils/logger.utils';
 
 
@@ -70,7 +71,7 @@ class App {
     // API Routes
     this.app.use(`${API_PREFIX}/auth`, authRoutes);
     // Add more routes here as you build them
-    // this.app.use(`${API_PREFIX}/users`, userRoutes);
+    this.app.use(`${API_PREFIX}/users`, userRoutes);
     // this.app.use(`${API_PREFIX}/patients`, patientRoutes);
     // this.app.use(`${API_PREFIX}/appointments`, appointmentRoutes);
   }

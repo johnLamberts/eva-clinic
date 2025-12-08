@@ -1,40 +1,70 @@
+import { Service } from "decorator/service.decorator";
 import BaseRepository from "~/orm/base-repository.orm";
 import { RefreshToken } from "../users/user.type";
 
+@Service()
 export class RefreshTokenRepository extends BaseRepository<RefreshToken> {
   protected tableName = 'refresh_tokens';
-  protected useTimestamps: boolean = false; 
+  protected useTimestamps = false; 
+  protected useSoftDeletes = false;
 
   async findByTokenHash(tokenHash: string): Promise<RefreshToken | null> {
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
     return this.newQuery()
       .where('token_hash', '=', tokenHash)
-      .where('revoked', '=',0)
-      .where('expires_at', '>', new Date().toISOString())
+      .where('revoked', '=', 0) // Check revoked status manually
+      .where('expires_at', '>', now)
       .first();
   }
 
+  async findActiveSessions(userId: number): Promise<RefreshToken[]> {
+    // 1. Safe Date Format for MySQL comparison
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+    return this.newQuery()
+      .where('user_id', '=', userId)
+      .where('revoked', '=', 0)      // Must not be revoked
+      .where('expires_at', '>', now) // Must not be expired
+      .orderBy('created_at', 'DESC') // Newest first
+      .get();
+  }
+  
   async revokeToken(tokenHash: string, replacedBy?: string): Promise<void> {
-    const token = await this.findOneBy({ token_hash: tokenHash });
-    if (token && token.id) {
-      await this.update(token.id, {
-        revoked: true,
-        revoked_at: new Date().toISOString(),
-        replaced_by_token: replacedBy,
-      });
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    
+    const updateData: any = {
+      revoked: true,
+      revoked_at: now,
+    };
+
+    if (replacedBy) {
+      updateData.replaced_by_token = replacedBy;
     }
+
+    // Direct update avoids "deleted_at" check entirely
+    await this.newQuery()
+      .where('token_hash', '=', tokenHash)
+      .update(updateData);
   }
 
   async revokeAllUserTokens(userId: number): Promise<void> {
-    // SIMPLE: Use update query with where clause instead of loop
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
     await this.newQuery()
       .where('user_id', '=', userId)
       .where('revoked', '=', 0)
-      .update({ revoked: true, revoked_at: new Date().toISOString() });
+      .update({ 
+        revoked: true, 
+        revoked_at: now 
+      });
   }
 
   async cleanupExpiredTokens(): Promise<number> {
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    
     return this.newQuery()
-      .where('expires_at', '<', new Date().toISOString())
+      .where('expires_at', '<', now)
       .delete();
   }
 }

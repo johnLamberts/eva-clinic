@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-escape */
 // src/modules/auth/auth.security.ts
 import argon2 from 'argon2';
 import crypto from 'crypto';

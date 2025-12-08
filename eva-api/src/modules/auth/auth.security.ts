@@ -2,7 +2,6 @@ import argon2 from 'argon2';
 import crypto from 'crypto';
 import { Request } from 'express';
 import jwt, { Secret, SignOptions } from "jsonwebtoken";
-import { TokenPair } from './auth.security copy';
 
 export interface ITokenPayload {
   userId: number;
@@ -27,16 +26,19 @@ export interface IPasswordRequirements {
 }
 
 export class AuthSecurity {
-  private static readonly SECRETS = {
-    JWT: process.env.JWT_SECRET || 'dev-secret',
-    REFRESH: process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret'
-  };
-
+  
   private static readonly EXPIRY = {
     ACCESS: '15m',
     REFRESH: '7d',
     ACCESS_SECONDS: 900,
   };
+
+  private static get SECRETS() {
+    return  {
+      JWT: process.env.JWT_SECRET || 'dev-secret',
+      REFRESH: process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret'
+    } 
+  }
 
   static async hashPassword(plain: string): Promise<string> {
     return argon2.hash(plain, {
@@ -82,7 +84,7 @@ export class AuthSecurity {
   }
 
   // --- TOKEN MANAGEMENT
-  static generateTokenPair(payload: Omit<ITokenPayload, 'type'>): TokenPair {
+  static generateTokenPair(payload: Omit<ITokenPayload, 'type'>): ITokenPair {
     return {
       accessToken: this.sign(payload, 'access', this.EXPIRY.ACCESS),
       refreshToken: this.sign(payload, 'refresh', this.EXPIRY.REFRESH),
@@ -117,11 +119,19 @@ export class AuthSecurity {
   private static verify(token: string, type: 'access' | 'refresh'): ITokenPayload | null {
     try {
       const secret = type === 'access' ? this.SECRETS.JWT : this.SECRETS.REFRESH;
+      
+      console.log(`[AuthSecurity] Verifying ${type} token. Secret prefix: ${secret.substring(0, 4)}...`);
+      
       const decoded = jwt.verify(token, secret) as ITokenPayload;
       
-      if (decoded.type !== type) return null;
+      console.log(decoded, secret);
+      if (decoded.type !== type) {
+        console.error(`[AuthSecurity] Type Mismatch. Expected ${type}, got ${decoded.type}`);
+        return null
+      }
       return decoded;
-    } catch {
+    } catch (error: any){
+      console.error(`[AuthSecurity] Verification failed: ${error.message}`)
       return null;
     }
   }

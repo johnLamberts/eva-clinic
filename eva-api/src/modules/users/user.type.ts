@@ -21,7 +21,7 @@ export interface IUser extends BaseEntity {
   last_login_at?: string;
   failed_login_attempts: number;
   locked_until?: string;
-  password_changed_at: Date;
+  password_changed_at: Date | undefined | string;
   must_change_password: boolean;
   two_factor_enabled: boolean;
   two_factor_secret?: string;
@@ -43,6 +43,8 @@ export interface Role extends BaseEntity {
   updated_at: string;
 }
 
+
+
 export interface Permission extends BaseEntity {
   id: number;
   name: string;
@@ -59,6 +61,11 @@ export interface RolePermission {
   role_id: number;
   permission_id: number;
   created_at: string;
+}
+
+export interface RoleWithPermissions extends Role {
+  permissions: Permission[];
+  user_count: number;
 }
 
 export interface RefreshToken extends BaseEntity {

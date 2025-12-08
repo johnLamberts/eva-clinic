@@ -1,5 +1,7 @@
-import BaseRepository from "~/orm/base-repository.orm";
+import BaseRepository, { PaginationOptions } from "~/orm/base-repository.orm";
+import { PaginationResult } from "~/orm/query-builder.orm";
 import executeRaw from "~/utils/execute-raw.utils";
+import { UserFilters } from "./user.service";
 import { IUser, Permission, Role, UserStatus } from "./user.type";
 
 
@@ -40,7 +42,7 @@ export class UserRepository extends BaseRepository<IUser> {
     // Raw query
     const sql = `
       SELECT DISTINCT p.* FROM permissions p
-      JOIN role_permission rp ON p.id = rp.permission_id
+      JOIN role_permissions rp ON p.id = rp.permission_id
       JOIN users u ON u.role_id = rp.role_id
       WHERE u.id = ? and u.deleted_at IS NULL
     `;
@@ -78,6 +80,50 @@ export class UserRepository extends BaseRepository<IUser> {
     const query = this.newQuery().where('email', '=', email).whereNull('deleted_at');
     if (excludeUserId) query.where('id', '!=', excludeUserId);
     return (await query.count()) > 0;
+  }
+
+  // Return type matches your existing interface
+  async findUsersWithFilters(filters: UserFilters, pagination: PaginationOptions): Promise<PaginationResult<IUser>> {
+    const query = this.newQuery().select('*').whereNull('deleted_at');
+
+    // ... (Filter logic remains the same) ...
+    if (filters.status) query.where('status', '=', filters.status);
+    if (filters.roleId) query.where('role_id', '=', filters.roleId);
+    if (filters.emailVerified !== undefined) {
+      query.where('email_verified', '=', filters.emailVerified ? 1 : 0);
+    }
+    if (filters.search) {
+      const term = `%${filters.search}%`;
+      query.whereRaw('(email LIKE ? OR first_name LIKE ? OR last_name LIKE ?)', [term, term, term]);
+    }
+
+    // 1. Get Count
+    const total = await query.count(); 
+
+    // 2. Pagination
+    const offset = (pagination.page - 1) * pagination.limit;
+    query.limit(pagination.limit).offset(offset);
+    
+    // 3. Get Data
+    const data = await query.get();
+
+    // 🟢 FIX: Return the nested structure matching your interface
+    return {
+      data,
+      meta: {
+        total,
+        per_page: pagination.limit,
+        current_page: pagination.page,
+        last_page: Math.ceil(total / pagination.limit)
+      }
+    };
+  }
+
+  async countByRole(roleId: number): Promise<number> {
+    return this.newQuery()
+      .where('role_id', '=', roleId)
+      .whereNull('deleted_at')
+      .count();
   }
 
 }

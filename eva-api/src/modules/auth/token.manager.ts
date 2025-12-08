@@ -1,7 +1,7 @@
 import { Service } from "decorator/service.decorator";
 import { AppError } from "~/utils/app-error.utils";
 import { IUser } from "../users/user.type";
-import AuthSecurity from "./auth.security copy";
+import { AuthSecurity } from "./auth.security";
 import { RefreshTokenRepository } from "./refresh-token.repository";
 
 @Service()

@@ -26,6 +26,7 @@ export class AuthMiddleware {
     const token = header.substring(7) // Removing `Bearer`
     const payload= AuthSecurity.verifyAccessToken(token);
 
+    console.log(payload);
     if(!payload) {
       if(isRequired) throw new AppError(`Invalid or expired token`, 401);
       return;

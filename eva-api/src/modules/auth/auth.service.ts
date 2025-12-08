@@ -111,10 +111,10 @@ async register(dto: CreateUserDto): Promise<AuthResponse> {
 
   async refreshToken(token: string): Promise<AuthResponse> {
     // 1. Rotate Logic
-    const { userId, oldSession } = await this.tokenManager.rotateSession(token);
-    
+const { userId, email, oldSession } = await this.tokenManager.rotateSession(token);
+
     // 2. Re-fetch user to ensure they aren't banned in the meantime
-    const user = await this.userRepo.findByEmailWithRole(oldSession.email || ''); // Assuming email stored or fetch by ID
+    const user = await this.userRepo.findByEmailWithRole(email); // Assuming email stored or fetch by ID
     // Better: fetch by ID from payload
     // const user = await this.userRepo.findById(userId);
 
@@ -149,12 +149,11 @@ async register(dto: CreateUserDto): Promise<AuthResponse> {
 
     // 1. Basic validation
     if(new_password !== confirm_password) {
-      throw new AppError('New password and and confirmation password do not match', 400);
+      throw new AppError('New password and confirmation password do not match', 400);
     }
 
     // 2. Fetch user
     const user = await this.userRepo.findById(userId);
-
     if (!user) throw new AppError('User not found', 404);
 
     // 3. Verify Current Password
@@ -171,7 +170,6 @@ async register(dto: CreateUserDto): Promise<AuthResponse> {
     const history = await this.passwordHistoryRepo.getUserPasswordHistory(userId, 5);
     const historyHashes = history.map(h => h.password_hash);
     
-    // Use the helper we fixed in AuthSecurity
     const isReused = await AuthSecurity.IsPasswordReused(new_password, historyHashes);
     if (isReused) {
       throw new AppError('Password cannot be one of your last 5 passwords', 400);
@@ -181,18 +179,22 @@ async register(dto: CreateUserDto): Promise<AuthResponse> {
     await Transaction.transaction(async () => {
       const newHash = await AuthSecurity.hashPassword(new_password);
 
+      const now = new Date();
+      // Format: YYYY-MM-DD HH:MM:SS
+      const mysqlDate = now.toISOString().slice(0, 19).replace('T', ' ');
+
       // A. Update User
       await this.userRepo.update(userId, {
         password_hash: newHash,
-        password_changed_at: new Date().toISOString(),
-        must_change_password: false, // Clear flag if it was set
+        password_changed_at: mysqlDate, // ✅ Correct format
+        must_change_password: false,
       } as any);
 
       // B. Add to History
       await this.passwordHistoryRepo.addPasswordHistory(userId, newHash);
 
-      // C. Revoke All Sessions (Force Re-login for security)
-      // await this.tokenManager.revokeAllUserSessions(userId);
+      // C. Revoke All Sessions (Optional but recommended)
+      await this.tokenManager.revokeAllUserSessions(userId);
     });
   }
 

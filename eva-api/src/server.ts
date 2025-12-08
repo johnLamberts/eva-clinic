@@ -1,12 +1,10 @@
 /* eslint-disable @typescript-eslint/triple-slash-reference */
 /// <reference path="./types/express.d.ts" />
-import dotenv from 'dotenv';
+import 'dotenv/config';
 import app from './app';
 import DatabaseConnection from './orm/connection.orm';
 import logger from './utils/logger.utils';
 
-// Load environment variables
-dotenv.config();
 
 const PORT = process.env.PORT || 3000;
 

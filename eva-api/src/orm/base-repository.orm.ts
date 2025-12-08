@@ -167,7 +167,7 @@ export abstract class BaseRepository<T extends BaseEntity> implements Repository
 
     return this.newQuery().insertMany(insertData);
   }
-  async update(id: number, data: Partial<T>): Promise<boolean> {
+  async update(id: number, data: Partial<T>, updatedBy?: number): Promise<boolean> {
     const processedData = (this as any).beforeUpdate ? await (this as any).beforeUpdate(id, data) : data;
 
     const updateData: any = { ...processedData };
@@ -175,6 +175,12 @@ export abstract class BaseRepository<T extends BaseEntity> implements Repository
     // Only update timestamp if configured
     if (this.useTimestamps) {
       updateData.updated_at = new Date();
+    }
+
+    // Handle the updatedBy logic if your tables support it
+    if (updatedBy && 'updated_by' in updateData === false) {
+       // Only add it if the generic T allows it, or cast to any
+       updateData.updated_by = updatedBy;
     }
 
     // Sanitize
