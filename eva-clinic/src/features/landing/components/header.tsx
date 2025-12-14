@@ -3,10 +3,12 @@
 import { Button } from "@/components/ui/button"
 import { Menu } from "lucide-react"
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  const navigate = useNavigate();
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-sm">
       <div className="mx-auto max-w-7xl px-6 py-4">
@@ -34,7 +36,7 @@ export function Header() {
             </a>
           </nav>
 
-          <Button className="bg-accent text-accent-foreground hover:bg-accent/90 rounded-full px-6">Get Started</Button>
+          <Button onClick={() => navigate('/login')} className="bg-accent text-accent-foreground hover:bg-accent/90 rounded-full px-6">Get Started</Button>
         </div>
 
         {mobileMenuOpen && (
