@@ -30,6 +30,7 @@ import {
 
 @Service()
 export class PatientService {
+
   constructor(
     private patientRepo: PatientRepository,
     private medicalHistoryRepo: MedicalHistoryRepository,
@@ -37,7 +38,8 @@ export class PatientService {
     private documentRepo: PatientDocumentRepository,
     private noteRepo: PatientNoteRepository,
     private auditService: AuditService
-  ) {}
+  ) {
+  }
 
   // ---------------------------------------------------------
   // 🟢 CREATE
