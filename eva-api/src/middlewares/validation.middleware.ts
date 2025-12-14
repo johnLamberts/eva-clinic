@@ -25,7 +25,7 @@ export const validate = (schema: AnyZodObject) => {
         // 3. Format Errors for Frontend
         // Maps ['body', 'email'] -> 'email'
         const formattedErrors = error.errors.map(err => ({
-          field: err.path.slice(1).join('.'), 
+          field: err.path.join('.'), 
           message: err.message,
         }));
 

@@ -24,6 +24,7 @@ export interface BulkUserOperation {
 
 @Service()
 export class UserService {
+  
   constructor(
     private userRepo: UserRepository,
     private roleRepo: RoleRepository,

@@ -20,7 +20,6 @@ router.post(
   validate(createRoleSchema),
   roleController.createRole
 );
-
 /**
  * @route   GET /api/v1/roles
  * @desc    List all roles
