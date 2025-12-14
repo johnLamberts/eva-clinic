@@ -1,91 +1,111 @@
-import { Container } from "decorator/di.container";
 import { Router } from "express";
 import authMiddleware from "~/middlewares/auth.middleware";
 import { validate } from "~/middlewares/validation.middleware";
+
+// 1. Import Dependencies
 import RoleController from "./role.controller";
+import { RoleRepository } from "./role.repository";
+import { RoleService } from "./role.service";
+
+// 2. Import External Dependencies (The ones causing crashes if missing)
+import { AuditRepository } from "../audit/audit.repository";
+import AuditService from "../audit/audit.service";
+import { UserRepository } from "../users/user.repository";
+
 import { assignRoleSchema, createRoleSchema, updateRoleSchema } from "./role.validation";
 
-
 const router = Router();
-const roleController = Container.resolve(RoleController );
+
+// ---------------------------------------------------------
+// 🏗️ MANUAL WIRING (Prevents "undefined" crashes)
+// ---------------------------------------------------------
+
+// A. Create Repositories
+const roleRepo = new RoleRepository();
+const userRepo = new UserRepository();
+const auditRepo = new AuditRepository(); // <--- Needed for AuditService
+
+// B. Create Services
+// We explicitly pass 'auditRepo' so AuditService.log() works!
+const auditService = new AuditService(auditRepo); 
+
+const roleService = new RoleService(roleRepo, userRepo, auditService);
+
+// C. Create Controller
+const roleController = new RoleController(roleService);
+
+// ---------------------------------------------------------
+// 🟢 ROUTES
+// ---------------------------------------------------------
+
+// 🛑 AUTHENTICATION: Required for all routes below
+router.use(authMiddleware.authenticate);
 
 /**
  * @route   POST /api/v1/roles
- * @desc    Create new role
- * @access  Private (requires users.manage_roles permission)
  */
 router.post(
   '/',
   authMiddleware.requirePermission('users.manage_roles'),
   validate(createRoleSchema),
-  roleController.createRole
+  // ⚠️ ARROW FUNCTION WRAPPER: Essential to keep 'this' context!
+  (req, res, next) => roleController.createRole(req, res, next)
 );
+
 /**
  * @route   GET /api/v1/roles
- * @desc    List all roles
- * @access  Private (requires users.read permission)
  */
 router.get(
   '/',
   authMiddleware.requirePermission('users.read'),
-  roleController.listRoles
+  (req, res, next) => roleController.listRoles(req, res, next)
 );
 
 /**
  * @route   GET /api/v1/roles/permissions
- * @desc    Get all available permissions
- * @access  Private (requires users.read permission)
  */
 router.get(
   '/permissions',
   authMiddleware.requirePermission('users.read'),
-  roleController.getAllPermissions
+  (req, res, next) => roleController.getAllPermissions(req, res, next)
 );
 
 /**
  * @route   GET /api/v1/roles/:id
- * @desc    Get role by ID
- * @access  Private (requires users.read permission)
  */
 router.get(
   '/:id',
   authMiddleware.requirePermission('users.read'),
-  roleController.getRoleById
+  (req, res, next) => roleController.getRoleById(req, res, next)
 );
 
 /**
  * @route   PUT /api/v1/roles/:id
- * @desc    Update role
- * @access  Private (requires users.manage_roles permission)
  */
 router.put(
   '/:id',
   authMiddleware.requirePermission('users.manage_roles'),
   validate(updateRoleSchema),
-  roleController.updateRole
+  (req, res, next) => roleController.updateRole(req, res, next)
 );
 
 /**
  * @route   DELETE /api/v1/roles/:id
- * @desc    Delete role
- * @access  Private (requires users.manage_roles permission)
  */
 router.delete(
   '/:id',
   authMiddleware.requirePermission('users.manage_roles'),
-  roleController.deleteRole
+  (req, res, next) => roleController.deleteRole(req, res, next)
 );
 
 /**
  * @route   POST /api/v1/roles/assign/:userId
- * @desc    Assign role to user
- * @access  Private (requires users.manage_roles permission)
  */
 router.post(
   '/assign/:userId',
   authMiddleware.requirePermission('users.manage_roles'),
   validate(assignRoleSchema),
-  roleController.assignRoleToUser
+  (req, res, next) => roleController.assignRoleToUser(req, res, next)
 );
 
-export default router;
+export const roleRoutes = router;

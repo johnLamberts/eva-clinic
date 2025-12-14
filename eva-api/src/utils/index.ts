@@ -1,5 +1,6 @@
 export * from './api-response.utils';
 export * from './app-error.utils';
+export * from './check-permission.utils';
 export * from './dates.utils';
 export * from './execute-raw.utils';
 export * from './global-error.utils';
